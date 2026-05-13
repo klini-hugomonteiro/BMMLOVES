@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ContadorTempo from "../components/ContadorTempo";
@@ -112,7 +112,7 @@ const CIDADES_BR = [
 const inp = "w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#E8185A] transition-colors text-sm";
 const lbl = "block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2";
 
-export default function CriarPage() {
+function CriarPageInner() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("editId");
   const isEditing = !!editId;
@@ -1426,5 +1426,17 @@ function EpisodioCard({
         </div>
       )}
     </div>
+  );
+}
+
+export default function CriarPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#E8185A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <CriarPageInner />
+    </Suspense>
   );
 }

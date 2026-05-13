@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -11,7 +11,7 @@ type SavedData = {
   email: string;
 };
 
-export default function ProntoPage() {
+function ProntoPageInner() {
   const [data, setData] = useState<SavedData | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrLoaded, setQrLoaded] = useState(false);
@@ -177,5 +177,17 @@ export default function ProntoPage() {
         <span className="text-[#E8185A] font-black">BMM</span>LOVE · Feito com ❤️
       </p>
     </div>
+  );
+}
+
+export default function ProntoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#E8185A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ProntoPageInner />
+    </Suspense>
   );
 }

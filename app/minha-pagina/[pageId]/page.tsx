@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -21,7 +21,7 @@ function fmt(ts: number) {
   return new Date(ts).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function MinhaPaginaPage() {
+function MinhaPaginaPageInner() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -240,5 +240,17 @@ export default function MinhaPaginaPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MinhaPaginaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#08080f] flex items-center justify-center">
+        <div className="w-7 h-7 border-2 border-[#E8185A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <MinhaPaginaPageInner />
+    </Suspense>
   );
 }
