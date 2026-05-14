@@ -59,17 +59,15 @@ export default function EntrarPage() {
     <div className="min-h-screen bg-[#08080f] flex items-center justify-center px-4"
       style={{ background: "radial-gradient(ellipse at top, #1a0a14 0%, #08080f 60%)" }}>
 
-      <div className="w-full max-w-sm">
-        {/* Voltar ao site */}
-        <div className="mb-6">
-          <Link href="/" className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs transition-colors w-fit">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Voltar ao site
-          </Link>
-        </div>
+      {/* Voltar ao site — canto superior esquerdo */}
+      <Link href="/" className="absolute top-5 left-5 flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Voltar ao site
+      </Link>
 
+      <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2.5">
