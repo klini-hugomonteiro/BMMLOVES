@@ -10,6 +10,7 @@ export type PageRecord = {
   plan: "7dias" | "vitalicio";
   createdAt: number;
   expiresAt: number | null;
+  freeEditUsed?: boolean;
 };
 
 export async function savePage(pageId: string, record: PageRecord): Promise<void> {

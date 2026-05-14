@@ -44,6 +44,18 @@ export async function POST(
   const existing = await getPage(pageId);
   if (!existing) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
+  const hoursOld = (Date.now() - existing.createdAt) / (1000 * 60 * 60);
+  const isFreeWindow = existing.plan === "vitalicio" && hoursOld < 24;
+  const isPaidUnlocked = !!(existing as { editUnlockedAt?: number }).editUnlockedAt;
+
+  if (!isFreeWindow && !isPaidUnlocked) {
+    return NextResponse.json({ error: "Edição não autorizada." }, { status: 403 });
+  }
+
+  if (isFreeWindow && existing.freeEditUsed) {
+    return NextResponse.json({ error: "Edição grátis já utilizada." }, { status: 403 });
+  }
+
   try {
     const formData = await req.formData();
     const dataJson = formData.get("data") as string;
@@ -67,7 +79,11 @@ export async function POST(
     }
 
     await processImagesInPayload(payload, pageId);
-    await savePage(pageId, { ...existing, data: payload });
+    await savePage(pageId, {
+      ...existing,
+      data: payload,
+      freeEditUsed: isFreeWindow ? true : existing.freeEditUsed,
+    });
 
     return NextResponse.json({ ok: true, pageId });
   } catch (err) {

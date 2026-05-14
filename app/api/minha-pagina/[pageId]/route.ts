@@ -36,7 +36,7 @@ export async function GET(
     createdAt: page.createdAt,
     expiresAt: page.expiresAt,
     canEdit: page.plan === "vitalicio",
-    editFree: page.plan === "vitalicio" && hoursOld < 24,
+    editFree: page.plan === "vitalicio" && hoursOld < 24 && !page.freeEditUsed,
     editUnlocked: !!editUnlocked,
   });
 }
