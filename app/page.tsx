@@ -261,7 +261,7 @@ export default async function Home() {
                 <span className="text-2xl font-black text-white mb-1">,90</span>
               </div>
               <ul className="space-y-2.5 mb-6 text-sm text-gray-400">
-                {["Acesso por 7 dias", "Edições ilimitadas", "Fotos e seções ilimitadas"].map((i) => (
+                {["Acesso por 7 dias", "Sem edições", "Fotos e seções ilimitadas"].map((i) => (
                   <li key={i} className="flex items-center gap-2.5"><span className="text-[#E8185A] font-bold">✓</span>{i}</li>
                 ))}
               </ul>
@@ -283,7 +283,7 @@ export default async function Home() {
                 <span className="text-2xl font-black text-[#E8185A] mb-1">,90</span>
               </div>
               <ul className="space-y-2.5 mb-6 text-sm text-gray-400">
-                {["Acesso para sempre", "Edições ilimitadas", "Fotos e seções ilimitadas"].map((i) => (
+                {["Acesso para sempre", "1 edição grátis em 24h", "Fotos e seções ilimitadas"].map((i) => (
                   <li key={i} className="flex items-center gap-2.5"><span className="text-[#E8185A] font-bold">✓</span>{i}</li>
                 ))}
               </ul>
