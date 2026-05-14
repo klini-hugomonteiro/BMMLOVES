@@ -1015,6 +1015,7 @@ function CriarPageInner() {
               Continuar →
             </button>
           ) : (
+            <>
             <button
               disabled={!canNext() || submitting}
               onClick={async () => {
@@ -1083,6 +1084,7 @@ function CriarPageInner() {
             {submitErro && (
               <p className="text-red-400 text-xs text-center mt-2">{submitErro}</p>
             )}
+            </>
           )}
         </div>
       </div>
