@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Step = "email" | "code";
 
@@ -59,6 +60,16 @@ export default function EntrarPage() {
       style={{ background: "radial-gradient(ellipse at top, #1a0a14 0%, #08080f 60%)" }}>
 
       <div className="w-full max-w-sm">
+        {/* Voltar ao site */}
+        <div className="mb-6">
+          <Link href="/" className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs transition-colors w-fit">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Voltar ao site
+          </Link>
+        </div>
+
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2.5">
