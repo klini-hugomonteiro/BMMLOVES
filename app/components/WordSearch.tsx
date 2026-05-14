@@ -115,10 +115,10 @@ export default function WordSearch({ words }: Props) {
   const allFound = found.size === normWords.length;
 
   return (
-    <div className="select-none">
+    <div className="select-none w-full">
       <div
         ref={gridRef}
-        className="inline-grid gap-1 touch-none"
+        className="grid gap-0.5 touch-none w-full"
         style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
         onPointerLeave={() => { confirm(startCell, endCell); setSelecting(false); setStartCell(null); setEndCell(null); }}
       >
@@ -134,7 +134,7 @@ export default function WordSearch({ words }: Props) {
                 onPointerDown={() => { setSelecting(true); setStartCell([r, c]); setEndCell([r, c]); }}
                 onPointerEnter={() => { if (selecting) setEndCell([r, c]); }}
                 onPointerUp={() => { confirm(startCell, endCell); setSelecting(false); setStartCell(null); setEndCell(null); }}
-                className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md text-[11px] sm:text-xs font-black cursor-pointer transition-all duration-150
+                className={`aspect-square flex items-center justify-center rounded text-[10px] font-black cursor-pointer transition-all duration-150
                   ${isFound
                     ? "bg-[#E8185A] text-white scale-105"
                     : isPreview

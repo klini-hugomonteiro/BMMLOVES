@@ -307,12 +307,12 @@ export default function DemoPage() {
         <section className="px-8 sm:px-12 pt-8 pb-4">
           <p className="text-[#E8185A] text-[10px] font-black uppercase tracking-widest mb-1">Mini Games</p>
           <h2 className="text-white font-black text-xl mb-5">Joguinhos do Casal</h2>
-          <div className="flex gap-4 flex-wrap">
+          <div className="grid grid-cols-2 gap-4">
             {/* Card Caça-Palavras */}
             <button
               onClick={() => setJogoAberto(true)}
               className="group relative rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-[#E8185A]/50 transition-all hover:scale-105"
-              style={{ width: 160, height: 200 }}
+              style={{ height: 200 }}
             >
               {/* Fundo gradiente */}
               <div className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#2d0a3e] to-[#1a1a2e]" />
@@ -343,7 +343,7 @@ export default function DemoPage() {
             <button
               onClick={() => setForcaAberta(true)}
               className="group relative rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-[#E8185A]/50 transition-all hover:scale-105"
-              style={{ width: 160, height: 200 }}
+              style={{ height: 200 }}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-[#0a1a2e] via-[#0a2a3e] to-[#1a1a2e]" />
               <div className="absolute inset-0 flex items-center justify-center opacity-40">
