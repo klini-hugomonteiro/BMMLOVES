@@ -22,6 +22,7 @@ type Episodio = {
   videoNome: string;
   capaPreview: string;
   videoErro: string;
+  videoUploading: boolean;
 };
 
 type FormData = {
@@ -45,7 +46,7 @@ type FormData = {
 };
 
 function novoEpisodio(): Episodio {
-  return { id: crypto.randomUUID(), titulo: "", descricao: "", videoTipo: "youtube", videoUrl: "", videoArquivo: null, videoNome: "", capaPreview: "", videoErro: "" };
+  return { id: crypto.randomUUID(), titulo: "", descricao: "", videoTipo: "youtube", videoUrl: "", videoArquivo: null, videoNome: "", capaPreview: "", videoErro: "", videoUploading: false };
 }
 function novoMomento(): Momento {
   return { id: crypto.randomUUID(), titulo: "", fotos: [] };
@@ -181,6 +182,7 @@ function CriarPageInner() {
             videoNome: ep.videoNome || "",
             capaPreview: ep.capaPreview || "",
             videoErro: "",
+            videoUploading: false,
           })) : prev.episodios,
           momentos: d.momentos?.length ? d.momentos.map((m: Record<string, unknown>) => ({
             id: m.id,
@@ -222,6 +224,7 @@ function CriarPageInner() {
           ...ep,
           videoArquivo: null,
           videoErro: "",
+          videoUploading: false,
         })),
         momentos: (draft.momentos || [prev.momentos[0]]).map((m: Momento) => ({
           ...m,
@@ -243,7 +246,7 @@ function CriarPageInner() {
         const draft = {
           ...data,
           fotoCapa: null,
-          episodios: data.episodios.map(ep => ({ ...ep, videoArquivo: null })),
+          episodios: data.episodios.map(ep => ({ ...ep, videoArquivo: null, videoUploading: false })),
           momentos: data.momentos.map(m => ({ ...m, fotos: m.fotos.map(f => ({ ...f, file: null })) })),
         };
         localStorage.setItem("bmm_draft", JSON.stringify(draft));
@@ -325,7 +328,7 @@ function CriarPageInner() {
     reader.readAsDataURL(file);
   };
 
-  const setEpisodio = (id: string, field: keyof Episodio, value: string | File | null) =>
+  const setEpisodio = (id: string, field: keyof Episodio, value: string | File | null | boolean) =>
     setData(prev => ({
       ...prev,
       episodios: prev.episodios.map(ep => ep.id === id ? { ...ep, [field]: value } : ep),
@@ -343,20 +346,36 @@ function CriarPageInner() {
       setEpisodio(id, "videoErro", "Arquivo muito grande. Máximo 60 MB.");
       return;
     }
-    const url = URL.createObjectURL(file);
+    const objUrl = URL.createObjectURL(file);
     const vid = document.createElement("video");
     vid.preload = "metadata";
-    vid.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
+    vid.onloadedmetadata = async () => {
+      URL.revokeObjectURL(objUrl);
       if (vid.duration > 60) {
         setEpisodio(id, "videoErro", "Vídeo muito longo. Máximo 60 segundos.");
         return;
       }
       setEpisodio(id, "videoErro", "");
-      setEpisodio(id, "videoArquivo", file);
+      setEpisodio(id, "videoUploading", true);
       setEpisodio(id, "videoNome", file.name);
+      try {
+        const res = await fetch("/api/r2-upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName: file.name, contentType: file.type || "video/mp4" }),
+        });
+        const { uploadUrl, publicUrl } = await res.json();
+        await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type || "video/mp4" } });
+        setEpisodio(id, "videoUrl", publicUrl);
+        setEpisodio(id, "videoTipo", "arquivo");
+      } catch {
+        setEpisodio(id, "videoErro", "Erro ao enviar vídeo. Tente novamente.");
+        setEpisodio(id, "videoNome", "");
+      } finally {
+        setEpisodio(id, "videoUploading", false);
+      }
     };
-    vid.src = url;
+    vid.src = objUrl;
   };
 
   const setMomentoTitulo = (id: string, titulo: string) =>
@@ -417,7 +436,7 @@ function CriarPageInner() {
       case 3: return !!data.musicaUrl.trim();
       case 4: return !!data.fotoCapa || !!data.fotoCapaPreview;
       case 5: return data.episodios.length > 0 && data.episodios.every(ep =>
-        ep.titulo.trim() && (ep.videoTipo === "arquivo" ? (!!ep.videoArquivo || !!ep.videoNome) : !!ep.videoUrl.trim())
+        ep.titulo.trim() && !ep.videoUploading && (ep.videoTipo === "arquivo" ? !!ep.videoUrl.trim() : !!ep.videoUrl.trim())
       );
       case 6: return data.momentos.length > 0 && data.momentos.every(m => m.titulo.trim() && m.fotos.length > 0);
       case 7: return data.mensagem.trim().length > 0;
@@ -1165,6 +1184,12 @@ function CriarPageInner() {
                     }
                   }
 
+                  for (const ep of data.episodios) {
+                    if (ep.videoTipo === "arquivo" && ep.videoArquivo) {
+                      fd.append(`video_${ep.id}`, ep.videoArquivo, ep.videoNome || "video.mp4");
+                    }
+                  }
+
                   if (isEditing) {
                     const res = await fetch(`/api/editar/${editId}`, { method: "POST", body: fd });
                     if (!res.ok) throw new Error("Erro ao salvar alterações");
@@ -1511,7 +1536,13 @@ function EpisodioCard({
                   className="hidden"
                   onChange={e => e.target.files?.[0] && onVideoArquivo(e.target.files[0])}
                 />
-                {!ep.videoNome && (
+                {ep.videoUploading && (
+                  <div className="w-full py-5 rounded-xl border border-white/10 flex flex-col items-center gap-2 bg-white/[0.02]">
+                    <div className="w-5 h-5 border-2 border-[#E8185A] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-gray-500">Enviando vídeo para o servidor...</p>
+                  </div>
+                )}
+                {!ep.videoNome && !ep.videoUploading && (
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
@@ -1531,7 +1562,7 @@ function EpisodioCard({
                     <p className="text-red-400 text-xs">⚠️ {ep.videoErro}</p>
                   </div>
                 )}
-                {ep.videoNome && (
+                {ep.videoNome && !ep.videoUploading && (
                   <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-lg px-4 py-3 border border-green-500/20">
                     <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -1539,7 +1570,7 @@ function EpisodioCard({
                     <span className="text-green-400 text-xs truncate flex-1">{ep.videoNome}</span>
                     <button
                       type="button"
-                      onClick={() => { onChange("videoArquivo", ""); onChange("videoNome", ""); onChange("videoErro", ""); if (fileRef.current) fileRef.current.value = ""; }}
+                      onClick={() => { onChange("videoArquivo", ""); onChange("videoNome", ""); onChange("videoUrl", ""); onChange("videoErro", ""); if (fileRef.current) fileRef.current.value = ""; }}
                       className="text-gray-600 hover:text-red-400 text-xs transition-colors flex-shrink-0"
                     >
                       Trocar

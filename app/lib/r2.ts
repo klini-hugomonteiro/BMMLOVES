@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const r2 = new S3Client({
   region: "auto",
@@ -8,6 +9,15 @@ const r2 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 });
+
+export async function getPresignedUploadUrl(key: string, contentType: string): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+    ContentType: contentType,
+  });
+  return getSignedUrl(r2, command, { expiresIn: 3600 });
+}
 
 export async function uploadToR2(key: string, body: Buffer, contentType: string): Promise<string> {
   await r2.send(new PutObjectCommand({
