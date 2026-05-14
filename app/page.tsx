@@ -303,8 +303,9 @@ export default function Home() {
             <p className="text-gray-400 text-sm mb-8 leading-relaxed">Se a sua dúvida não estiver aqui, fale com a gente.</p>
             <div className="space-y-3 mb-6">
               {[
-                { icon: "📸", label: "Instagram", sub: "@bmmlove.ofic", href: "https://instagram.com/bmmlove" },
-                { icon: "✉️", label: "E-mail", sub: "suporte@bmmlove.com.br", href: "mailto:suporte@bmmlove.com.br" },
+                { icon: "📸", label: "Instagram", sub: "@bmmlove_", href: "https://instagram.com/bmmtech_" },
+                { icon: "✉️", label: "E-mail", sub: "suporte@bmmtech.com.br", href: "mailto:suporte@bmmtech.com.br" },
+                { icon: "📱", label: "WhatsApp", sub: " (21) 98101-2299", href: "https://api.whatsapp.com/send?phone=5521981012299" },
               ].map((c) => (
                 <a key={c.label} href={c.href} className="flex items-center justify-between bg-[#181818] border border-white/5 rounded-xl px-4 py-3 hover:border-white/10 transition-colors group">
                   <div className="flex items-center gap-3">
