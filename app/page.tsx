@@ -257,7 +257,7 @@ export default function Home() {
               <p className="text-gray-600 line-through text-sm mb-1">R$ 39,90</p>
               <div className="flex items-end gap-1 mb-5">
                 <span className="text-gray-400 text-sm mb-2">R$</span>
-                <span className="text-5xl font-black text-white">19</span>
+                <span className="text-5xl font-black text-white">15</span>
                 <span className="text-2xl font-black text-white mb-1">,90</span>
               </div>
               <ul className="space-y-2.5 mb-6 text-sm text-gray-400">
@@ -279,7 +279,7 @@ export default function Home() {
               <p className="text-gray-600 line-through text-sm mb-1">R$ 69,90</p>
               <div className="flex items-end gap-1 mb-5">
                 <span className="text-gray-400 text-sm mb-2">R$</span>
-                <span className="text-5xl font-black text-[#E8185A]">29</span>
+                <span className="text-5xl font-black text-[#E8185A]">23</span>
                 <span className="text-2xl font-black text-[#E8185A] mb-1">,90</span>
               </div>
               <ul className="space-y-2.5 mb-6 text-sm text-gray-400">

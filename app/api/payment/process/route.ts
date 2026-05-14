@@ -7,7 +7,7 @@ import { sendPageReadyEmail } from "@/app/lib/email";
 import { applyCoupon, incrementCouponUse } from "@/app/lib/coupons";
 import { incrementCount } from "@/app/lib/counter";
 
-const PRICES: Record<string, number> = { "7dias": 19.90, vitalicio: 29.90, edit: 4.90 };
+const PRICES: Record<string, number> = { "7dias": 15.90, vitalicio: 23.90, edit: 4.90 };
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://bmmmlove.com";
 

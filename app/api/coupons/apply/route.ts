@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { applyCoupon } from "@/app/lib/coupons";
 
-const PRICES = { "7dias": 19.90, vitalicio: 29.90 };
+const PRICES = { "7dias": 15.90, vitalicio: 23.90 };
 
 export async function POST(req: NextRequest) {
   const { code, plan } = await req.json();

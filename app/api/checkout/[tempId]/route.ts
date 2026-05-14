@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getPending } from "@/app/lib/pending";
 
-const PRICES = { "7dias": 19.90, vitalicio: 29.90 };
+const PRICES = { "7dias": 15.90, vitalicio: 23.90 };
 const EDIT_PRICE = 4.90;
 
 export async function GET(
