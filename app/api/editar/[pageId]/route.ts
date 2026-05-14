@@ -44,15 +44,19 @@ export async function POST(
   const existing = await getPage(pageId);
   if (!existing) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
+  if (existing.plan !== "vitalicio") {
+    return NextResponse.json({ error: "Edição não disponível neste plano." }, { status: 403 });
+  }
+
   const hoursOld = (Date.now() - existing.createdAt) / (1000 * 60 * 60);
-  const isFreeWindow = existing.plan === "vitalicio" && hoursOld < 24;
+  const isFreeWindow = hoursOld < 24 && !existing.freeEditUsed;
   const isPaidUnlocked = !!(existing as { editUnlockedAt?: number }).editUnlockedAt;
 
   if (!isFreeWindow && !isPaidUnlocked) {
     return NextResponse.json({ error: "Edição não autorizada." }, { status: 403 });
   }
 
-  if (isFreeWindow && existing.freeEditUsed) {
+  if (!isFreeWindow && existing.freeEditUsed && !isPaidUnlocked) {
     return NextResponse.json({ error: "Edição grátis já utilizada." }, { status: 403 });
   }
 

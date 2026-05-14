@@ -28,7 +28,7 @@ export async function POST(
   }
 
   const hoursOld = (Date.now() - page.createdAt) / (1000 * 60 * 60);
-  if (hoursOld < 24) {
+  if (hoursOld < 24 && !page.freeEditUsed) {
     return NextResponse.json({ error: "Dentro das 24h, edição é gratuita." }, { status: 400 });
   }
 
