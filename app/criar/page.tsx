@@ -21,6 +21,7 @@ type Episodio = {
   videoArquivo: File | null;
   videoNome: string;
   capaPreview: string;
+  videoErro: string;
 };
 
 type FormData = {
@@ -44,7 +45,7 @@ type FormData = {
 };
 
 function novoEpisodio(): Episodio {
-  return { id: crypto.randomUUID(), titulo: "", descricao: "", videoTipo: "youtube", videoUrl: "", videoArquivo: null, videoNome: "", capaPreview: "" };
+  return { id: crypto.randomUUID(), titulo: "", descricao: "", videoTipo: "youtube", videoUrl: "", videoArquivo: null, videoNome: "", capaPreview: "", videoErro: "" };
 }
 function novoMomento(): Momento {
   return { id: crypto.randomUUID(), titulo: "", fotos: [] };
@@ -176,6 +177,7 @@ function CriarPageInner() {
             videoArquivo: null,
             videoNome: ep.videoNome || "",
             capaPreview: ep.capaPreview || "",
+            videoErro: "",
           })) : prev.episodios,
           momentos: d.momentos?.length ? d.momentos.map((m: Record<string, unknown>) => ({
             id: m.id,
@@ -280,8 +282,25 @@ function CriarPageInner() {
     setData(prev => ({ ...prev, episodios: prev.episodios.filter(ep => ep.id !== id) }));
 
   const handleVideoArquivo = (id: string, file: File) => {
-    setEpisodio(id, "videoArquivo", file);
-    setEpisodio(id, "videoNome", file.name);
+    const MAX_MB = 60 * 1024 * 1024;
+    if (file.size > MAX_MB) {
+      setEpisodio(id, "videoErro", "Arquivo muito grande. Máximo 60 MB.");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const vid = document.createElement("video");
+    vid.preload = "metadata";
+    vid.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      if (vid.duration > 60) {
+        setEpisodio(id, "videoErro", "Vídeo muito longo. Máximo 60 segundos.");
+        return;
+      }
+      setEpisodio(id, "videoErro", "");
+      setEpisodio(id, "videoArquivo", file);
+      setEpisodio(id, "videoNome", file.name);
+    };
+    vid.src = url;
   };
 
   const setMomentoTitulo = (id: string, titulo: string) =>
@@ -740,13 +759,18 @@ function CriarPageInner() {
                 />
               ))}
 
-              <button
-                type="button"
-                onClick={addEpisodio}
-                className="w-full py-3 rounded-xl border-2 border-dashed border-white/10 text-gray-500 text-sm hover:border-[#E8185A]/40 hover:text-[#E8185A] transition-all flex items-center justify-center gap-2"
-              >
-                <span className="text-lg leading-none">+</span> Adicionar episódio
-              </button>
+              {data.episodios.length < 5 && (
+                <button
+                  type="button"
+                  onClick={addEpisodio}
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-white/10 text-gray-500 text-sm hover:border-[#E8185A]/40 hover:text-[#E8185A] transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="text-lg leading-none">+</span> Adicionar episódio
+                </button>
+              )}
+              {data.episodios.length >= 5 && (
+                <p className="text-center text-gray-600 text-xs py-2">Limite de 5 episódios atingido</p>
+              )}
             </div>
           )}
 
@@ -768,13 +792,18 @@ function CriarPageInner() {
                   lbl={lbl}
                 />
               ))}
-              <button
-                type="button"
-                onClick={addMomento}
-                className="w-full py-3 rounded-xl border-2 border-dashed border-white/10 text-gray-500 text-sm hover:border-[#E8185A]/40 hover:text-[#E8185A] transition-all flex items-center justify-center gap-2"
-              >
-                <span className="text-lg leading-none">+</span> Adicionar álbum
-              </button>
+              {data.momentos.length < 5 && (
+                <button
+                  type="button"
+                  onClick={addMomento}
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-white/10 text-gray-500 text-sm hover:border-[#E8185A]/40 hover:text-[#E8185A] transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="text-lg leading-none">+</span> Adicionar álbum
+                </button>
+              )}
+              {data.momentos.length >= 5 && (
+                <p className="text-center text-gray-600 text-xs py-2">Limite de 5 álbuns atingido</p>
+              )}
             </div>
           )}
 
@@ -1417,8 +1446,15 @@ function EpisodioCard({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                     </svg>
                     <p className="text-xs text-gray-500 group-hover:text-white transition-colors">Clique ou arraste o vídeo (MP4, MOV, AVI...)</p>
+                    <p className="text-[10px] text-gray-600">Máx. 60 segundos · 60 MB</p>
                   </button>
-                ) : (
+                )}
+                {ep.videoErro && (
+                  <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
+                    <p className="text-red-400 text-xs">⚠️ {ep.videoErro}</p>
+                  </div>
+                )}
+                {ep.videoNome && (
                   <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-lg px-4 py-3 border border-green-500/20">
                     <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -1426,7 +1462,7 @@ function EpisodioCard({
                     <span className="text-green-400 text-xs truncate flex-1">{ep.videoNome}</span>
                     <button
                       type="button"
-                      onClick={() => { onChange("videoArquivo", ""); onChange("videoNome", ""); if (fileRef.current) fileRef.current.value = ""; }}
+                      onClick={() => { onChange("videoArquivo", ""); onChange("videoNome", ""); onChange("videoErro", ""); if (fileRef.current) fileRef.current.value = ""; }}
                       className="text-gray-600 hover:text-red-400 text-xs transition-colors flex-shrink-0"
                     >
                       Trocar
