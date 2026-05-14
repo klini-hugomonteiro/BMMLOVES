@@ -170,7 +170,7 @@ export default function AdminPage() {
                 {/* Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: "Faturamento total", value: `R$ ${totalReceita.toFixed(2).replace(".", ",")}`, sub: `${pages.length} vendas`, color: "text-green-400" },
+                    { label: "Faturamento líquido", value: `R$ ${Math.max(0, totalReceita - totalDescontos).toFixed(2).replace(".", ",")}`, sub: `bruto R$ ${totalReceita.toFixed(2).replace(".", ",")}`, color: "text-green-400" },
                     { label: "Descontos dados", value: `R$ ${totalDescontos.toFixed(2).replace(".", ",")}`, sub: `${coupons.reduce((s, c) => s + c.uses, 0)} usos de cupom`, color: "text-yellow-400" },
                     { label: "Plano 7 dias", value: pages.filter(p => p.plan === "7dias").length.toString(), sub: `R$ ${(pages.filter(p => p.plan === "7dias").length * 15.90).toFixed(2).replace(".", ",")}`, color: "text-blue-400" },
                     { label: "Plano Vitalício", value: pages.filter(p => p.plan === "vitalicio").length.toString(), sub: `R$ ${(pages.filter(p => p.plan === "vitalicio").length * 23.90).toFixed(2).replace(".", ",")}`, color: "text-[#E8185A]" },
