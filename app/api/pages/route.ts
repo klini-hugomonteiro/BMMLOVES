@@ -14,21 +14,22 @@ export async function POST(req: NextRequest) {
     const payload: Record<string, any> = JSON.parse(dataJson);
     const pageId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
-    // Save uploaded video files to public/uploads/[pageId]/
+    // Save uploaded video files to data/uploads/[pageId]/
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
-        const uploadDir = path.join(process.cwd(), "public", "uploads", pageId);
+        const uploadDir = path.join(process.cwd(), "data", "uploads", pageId);
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
         const buffer = Buffer.from(await value.arrayBuffer());
-        const fileName = `${epId}.mp4`;
+        const ext = path.extname(value.name) || ".mp4";
+        const fileName = `${epId}${ext}`;
         fs.writeFileSync(path.join(uploadDir, fileName), buffer);
 
-        // Update episode videoUrl to the public path
+        // Update episode videoUrl to the API serving path
         const ep = payload.episodios?.find((e: { id: string }) => e.id === epId);
         if (ep) {
-          ep.videoUrl = `/uploads/${pageId}/${fileName}`;
+          ep.videoUrl = `/api/uploads/${pageId}/${fileName}`;
           ep.videoTipo = "arquivo";
         }
       }

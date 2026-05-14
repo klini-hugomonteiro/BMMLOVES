@@ -56,11 +56,13 @@ export async function POST(
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
-        const uploadDir = path.join(process.cwd(), "public", "uploads", pageId);
+        const uploadDir = path.join(process.cwd(), "data", "uploads", pageId);
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        fs.writeFileSync(path.join(uploadDir, `${epId}.mp4`), Buffer.from(await value.arrayBuffer()));
+        const ext = path.extname(value.name) || ".mp4";
+        const fileName = `${epId}${ext}`;
+        fs.writeFileSync(path.join(uploadDir, fileName), Buffer.from(await value.arrayBuffer()));
         const ep = payload.episodios?.find((e: { id: string }) => e.id === epId);
-        if (ep) { ep.videoUrl = `/uploads/${pageId}/${epId}.mp4`; ep.videoTipo = "arquivo"; }
+        if (ep) { ep.videoUrl = `/api/uploads/${pageId}/${fileName}`; ep.videoTipo = "arquivo"; }
       }
     }
 
