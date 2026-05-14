@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { savePending } from "@/app/lib/pending";
-import fs from "fs";
+import { uploadToR2, processImagesInPayload } from "@/app/lib/r2";
 import path from "path";
 
 export async function POST(req: NextRequest) {
@@ -15,19 +15,23 @@ export async function POST(req: NextRequest) {
     const plan = (payload.plano as "7dias" | "vitalicio") || "7dias";
     const tempId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
-    // Save video files now (tempId = eventual pageId)
+    // Upload video files to R2 (tempId = eventual pageId)
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
-        const uploadDir = path.join(process.cwd(), "data", "uploads", tempId);
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         const ext = path.extname(value.name) || ".mp4";
         const fileName = `${epId}${ext}`;
-        fs.writeFileSync(path.join(uploadDir, fileName), Buffer.from(await value.arrayBuffer()));
+        const buffer = Buffer.from(await value.arrayBuffer());
+        const contentType = value.type || "video/mp4";
+        const url = await uploadToR2(`${tempId}/${fileName}`, buffer, contentType);
+
         const ep = payload.episodios?.find((e: { id: string }) => e.id === epId);
-        if (ep) { ep.videoUrl = `/api/uploads/${tempId}/${fileName}`; ep.videoTipo = "arquivo"; }
+        if (ep) { ep.videoUrl = url; ep.videoTipo = "arquivo"; }
       }
     }
+
+    // Upload all base64 images to R2
+    await processImagesInPayload(payload, tempId);
 
     savePending(tempId, {
       data: payload,

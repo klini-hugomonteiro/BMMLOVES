@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/app/lib/auth";
 import { getPage, savePage } from "@/app/lib/pageStore";
-import fs from "fs";
+import { uploadToR2, processImagesInPayload } from "@/app/lib/r2";
 import path from "path";
 
 export async function GET(
@@ -52,25 +52,25 @@ export async function POST(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: Record<string, any> = JSON.parse(dataJson);
 
-    // Reprocessa vídeos novos enviados
+    // Upload new video files to R2
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
-        const uploadDir = path.join(process.cwd(), "data", "uploads", pageId);
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         const ext = path.extname(value.name) || ".mp4";
         const fileName = `${epId}${ext}`;
-        fs.writeFileSync(path.join(uploadDir, fileName), Buffer.from(await value.arrayBuffer()));
+        const buffer = Buffer.from(await value.arrayBuffer());
+        const contentType = value.type || "video/mp4";
+        const url = await uploadToR2(`${pageId}/${fileName}`, buffer, contentType);
+
         const ep = payload.episodios?.find((e: { id: string }) => e.id === epId);
-        if (ep) { ep.videoUrl = `/api/uploads/${pageId}/${fileName}`; ep.videoTipo = "arquivo"; }
+        if (ep) { ep.videoUrl = url; ep.videoTipo = "arquivo"; }
       }
     }
 
-    // Preserva plano e datas; só atualiza data
-    savePage(pageId, {
-      ...existing,
-      data: payload,
-    });
+    // Upload all base64 images to R2
+    await processImagesInPayload(payload, pageId);
+
+    savePage(pageId, { ...existing, data: payload });
 
     return NextResponse.json({ ok: true, pageId });
   } catch (err) {

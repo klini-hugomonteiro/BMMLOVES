@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { savePage } from "@/app/lib/pageStore";
-import fs from "fs";
+import { uploadToR2, processImagesInPayload } from "@/app/lib/r2";
 import path from "path";
 
 export async function POST(req: NextRequest) {
@@ -14,26 +14,26 @@ export async function POST(req: NextRequest) {
     const payload: Record<string, any> = JSON.parse(dataJson);
     const pageId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
-    // Save uploaded video files to data/uploads/[pageId]/
+    // Upload video files to R2
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
-        const uploadDir = path.join(process.cwd(), "data", "uploads", pageId);
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-        const buffer = Buffer.from(await value.arrayBuffer());
         const ext = path.extname(value.name) || ".mp4";
         const fileName = `${epId}${ext}`;
-        fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+        const buffer = Buffer.from(await value.arrayBuffer());
+        const contentType = value.type || "video/mp4";
+        const url = await uploadToR2(`${pageId}/${fileName}`, buffer, contentType);
 
-        // Update episode videoUrl to the API serving path
         const ep = payload.episodios?.find((e: { id: string }) => e.id === epId);
         if (ep) {
-          ep.videoUrl = `/api/uploads/${pageId}/${fileName}`;
+          ep.videoUrl = url;
           ep.videoTipo = "arquivo";
         }
       }
     }
+
+    // Upload all base64 images (capa, momentos, episódios covers) to R2
+    await processImagesInPayload(payload, pageId);
 
     const plan = (payload.plano as "7dias" | "vitalicio") || "7dias";
     const now = Date.now();
