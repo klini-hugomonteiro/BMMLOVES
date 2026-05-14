@@ -119,6 +119,7 @@ function CriarPageInner() {
 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [submitErro, setSubmitErro] = useState("");
   const [loadingEdit, setLoadingEdit] = useState(isEditing);
   const [data, setData] = useState<FormData>({
     nome1: "",
@@ -346,7 +347,7 @@ function CriarPageInner() {
       case 6: return data.momentos.length > 0 && data.momentos.every(m => m.titulo.trim() && m.fotos.length > 0);
       case 7: return data.mensagem.trim().length > 0;
       case 8: return data.palavras.every(p => p.trim().length > 0) && data.palavrasForca.every(p => p.trim().length > 0);
-      case 9: return /\S+@\S+\.\S+/.test(data.email) && !!data.plano;
+      case 9: return /\S+@\S+\.\S+/.test(data.email) && (isEditing || !!data.plano);
       default: return true;
     }
   };
@@ -582,7 +583,7 @@ function CriarPageInner() {
                     value={data.musicaUrl}
                     onChange={handleMusicaChange}
                     onFocus={() => setMusicaFocus(true)}
-                    onBlur={() => setTimeout(() => setMusicaFocus(false), 200)}
+                    onBlur={() => setTimeout(() => setMusicaFocus(false), 300)}
                     autoFocus
                     autoComplete="off"
                   />
@@ -600,9 +601,10 @@ function CriarPageInner() {
                       <button
                         key={i}
                         type="button"
-                        onMouseDown={() => {
+                        onPointerDown={() => {
                           setData(prev => ({ ...prev, musicaUrl: `${m.nome} — ${m.artista}` }));
                           setMusicaResultados([]);
+                          setMusicaFocus(false);
                         }}
                         className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
                       >
@@ -900,55 +902,59 @@ function CriarPageInner() {
           {step === 9 && (
             <div className="space-y-5">
               <p className="text-gray-500 text-sm leading-relaxed">
-                Escolha o plano e informe seu e-mail para receber o link da página.
+                {isEditing
+                  ? "Revise as informações e salve as alterações da sua página."
+                  : "Escolha o plano e informe seu e-mail para receber o link da página."}
               </p>
 
-              {/* Plano */}
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Escolha o plano <span className="text-[#E8185A]">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setData(p => ({ ...p, plano: "7dias" }))}
-                    className={`relative rounded-xl p-4 text-left border-2 transition-all ${data.plano === "7dias" ? "border-[#E8185A] bg-[#E8185A]/10" : "border-white/10 bg-[#1a1a1a] hover:border-white/20"}`}
-                  >
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">7 Dias</p>
-                    <div className="flex items-end gap-0.5 mb-1">
-                      <span className="text-white font-black text-2xl">R$ 19</span>
-                      <span className="text-white font-black text-sm mb-0.5">,90</span>
-                    </div>
-                    <p className="text-gray-500 text-xs line-through mb-2">R$ 39,90</p>
-                    <ul className="space-y-1 text-xs text-gray-400">
-                      <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Acesso por 7 dias</li>
-                      <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Edições ilimitadas</li>
-                    </ul>
-                    {data.plano === "7dias" && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#E8185A] flex items-center justify-center"><svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg></div>}
-                  </button>
+              {/* Plano — só aparece para quem ainda não comprou */}
+              {!isEditing && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    Escolha o plano <span className="text-[#E8185A]">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setData(p => ({ ...p, plano: "7dias" }))}
+                      className={`relative rounded-xl p-4 text-left border-2 transition-all ${data.plano === "7dias" ? "border-[#E8185A] bg-[#E8185A]/10" : "border-white/10 bg-[#1a1a1a] hover:border-white/20"}`}
+                    >
+                      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">7 Dias</p>
+                      <div className="flex items-end gap-0.5 mb-1">
+                        <span className="text-white font-black text-2xl">R$ 19</span>
+                        <span className="text-white font-black text-sm mb-0.5">,90</span>
+                      </div>
+                      <p className="text-gray-500 text-xs line-through mb-2">R$ 39,90</p>
+                      <ul className="space-y-1 text-xs text-gray-400">
+                        <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Acesso por 7 dias</li>
+                        <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Edições ilimitadas</li>
+                      </ul>
+                      {data.plano === "7dias" && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#E8185A] flex items-center justify-center"><svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg></div>}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setData(p => ({ ...p, plano: "vitalicio" }))}
-                    className={`relative rounded-xl p-4 text-left border-2 transition-all ${data.plano === "vitalicio" ? "border-[#E8185A] bg-[#E8185A]/10" : "border-white/10 bg-[#1a1a1a] hover:border-white/20"}`}
-                  >
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#E8185A] text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap">
-                      Popular
-                    </div>
-                    <p className="text-[#E8185A] text-[10px] font-bold uppercase tracking-wider mb-2">Vitalício</p>
-                    <div className="flex items-end gap-0.5 mb-1">
-                      <span className="text-[#E8185A] font-black text-2xl">R$ 29</span>
-                      <span className="text-[#E8185A] font-black text-sm mb-0.5">,90</span>
-                    </div>
-                    <p className="text-gray-500 text-xs line-through mb-2">R$ 69,90</p>
-                    <ul className="space-y-1 text-xs text-gray-400">
-                      <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Acesso para sempre</li>
-                      <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Edições ilimitadas</li>
-                    </ul>
-                    {data.plano === "vitalicio" && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#E8185A] flex items-center justify-center"><svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg></div>}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setData(p => ({ ...p, plano: "vitalicio" }))}
+                      className={`relative rounded-xl p-4 text-left border-2 transition-all ${data.plano === "vitalicio" ? "border-[#E8185A] bg-[#E8185A]/10" : "border-white/10 bg-[#1a1a1a] hover:border-white/20"}`}
+                    >
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#E8185A] text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap">
+                        Popular
+                      </div>
+                      <p className="text-[#E8185A] text-[10px] font-bold uppercase tracking-wider mb-2">Vitalício</p>
+                      <div className="flex items-end gap-0.5 mb-1">
+                        <span className="text-[#E8185A] font-black text-2xl">R$ 29</span>
+                        <span className="text-[#E8185A] font-black text-sm mb-0.5">,90</span>
+                      </div>
+                      <p className="text-gray-500 text-xs line-through mb-2">R$ 69,90</p>
+                      <ul className="space-y-1 text-xs text-gray-400">
+                        <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Acesso para sempre</li>
+                        <li className="flex items-center gap-1.5"><span className="text-[#E8185A]">✓</span>Edições ilimitadas</li>
+                      </ul>
+                      {data.plano === "vitalicio" && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#E8185A] flex items-center justify-center"><svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg></div>}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Email */}
               <div>
@@ -1013,6 +1019,7 @@ function CriarPageInner() {
               disabled={!canNext() || submitting}
               onClick={async () => {
                 setSubmitting(true);
+                setSubmitErro("");
                 try {
                   const fd = new FormData();
                   const payload = {
@@ -1062,8 +1069,9 @@ function CriarPageInner() {
                     const { tempId } = await res.json();
                     router.push(`/pagamento/${tempId}`);
                   }
-                } catch {
+                } catch (err) {
                   setSubmitting(false);
+                  setSubmitErro(err instanceof Error ? err.message : "Erro inesperado. Tente novamente.");
                 }
               }}
               className="flex-1 py-3 rounded-lg bg-[#E8185A] text-white font-bold text-sm hover:bg-[#c91450] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -1072,6 +1080,9 @@ function CriarPageInner() {
                 <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Salvando...</>
               ) : isEditing ? "Salvar alterações ❤️" : "Ir para pagamento ❤️"}
             </button>
+            {submitErro && (
+              <p className="text-red-400 text-xs text-center mt-2">{submitErro}</p>
+            )}
           )}
         </div>
       </div>

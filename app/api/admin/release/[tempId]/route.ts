@@ -4,6 +4,7 @@ import { validateSession } from "@/app/lib/auth";
 import { getPending, deletePending } from "@/app/lib/pending";
 import { savePage } from "@/app/lib/pageStore";
 import { sendPageReadyEmail } from "@/app/lib/email";
+import { incrementCount } from "@/app/lib/counter";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://bmmmlove.com";
 
@@ -23,6 +24,7 @@ export async function POST(
 
   savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
   deletePending(tempId);
+  incrementCount();
 
   const pageUrl = `${BASE_URL}/casal/${tempId}`;
   sendPageReadyEmail({

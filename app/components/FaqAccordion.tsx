@@ -10,7 +10,7 @@ const faqs = [
   { q: "Como entrego a surpresa?", a: "Após o pagamento você recebe instantaneamente o link e um QR Code. Envie pelo WhatsApp, e-mail, ou imprima o QR Code." },
   { q: "O acesso é imediato após o pagamento?", a: "Sim! Assim que o pagamento é confirmado, você recebe tudo na hora. Sem espera." },
   { q: "O que tem na Retrospectiva?", a: "A retrospectiva mostra os melhores momentos do casal em cards animados, com a música favorita tocando no fundo — igual ao Spotify Wrapped mas para o amor de vocês." },
-  { q: "Se eu errar algo, posso editar depois?", a: "Sim! Com qualquer plano você tem edições ilimitadas. Pode alterar fotos, textos e músicas quando quiser." },
+  { q: "Se eu errar algo, posso editar depois?", a: "No plano Vitalício, você tem até 24 horas após a compra para editar gratuitamente. Depois desse prazo, edições são cobradas com uma taxa adicional." },
 ];
 
 export default function FaqAccordion() {

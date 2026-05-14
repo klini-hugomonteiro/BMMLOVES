@@ -306,7 +306,7 @@ export default function Home() {
             <p className="text-gray-400 text-sm mb-8 leading-relaxed">Se a sua dúvida não estiver aqui, fale com a gente.</p>
             <div className="space-y-3 mb-6">
               {[
-                { icon: "📸", label: "Instagram", sub: "@bmmlove_", href: "https://instagram.com/bmmtech_" },
+                { icon: "📸", label: "Instagram", sub: "@bmmlove_", href: "https://www.instagram.com/bmmlove_" },
                 { icon: "✉️", label: "E-mail", sub: "suporte@bmmtech.com.br", href: "mailto:suporte@bmmtech.com.br" },
                 { icon: "📱", label: "WhatsApp", sub: " (21) 98101-2299", href: "https://api.whatsapp.com/send?phone=5521981012299" },
               ].map((c) => (
