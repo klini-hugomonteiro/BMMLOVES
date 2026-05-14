@@ -15,7 +15,7 @@ type Coupon = {
   maxUses: number | null; uses: number; active: boolean; createdAt: number;
 };
 
-type Tab = "pedidos" | "pendentes" | "cupons";
+type Tab = "visao-geral" | "pedidos" | "pendentes" | "cupons";
 
 function fmt(ts: number) {
   return new Date(ts).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -23,7 +23,7 @@ function fmt(ts: number) {
 
 export default function AdminPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("pedidos");
+  const [tab, setTab] = useState<Tab>("visao-geral");
   const [pages, setPages] = useState<PageOrder[]>([]);
   const [pending, setPending] = useState<PendingOrder[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -93,7 +93,29 @@ export default function AdminPage() {
     router.push("/login");
   }
 
+  const PRICES = { "7dias": 15.90, vitalicio: 23.90 };
+  const totalReceita = pages.reduce((s, p) => s + (PRICES[p.plan as keyof typeof PRICES] ?? 0), 0);
+  const totalDescontos = coupons.reduce((s, c) => {
+    if (c.type === "fixed") return s + c.uses * c.discount;
+    const base = c.discount / 100;
+    return s + c.uses * (PRICES["7dias"] * base + PRICES["vitalicio"] * base) / 2;
+  }, 0);
+
+  // Últimos 14 dias de vendas
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const dias14 = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(hoje); d.setDate(d.getDate() - 13 + i);
+    return { label: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), ts: d.getTime(), count: 0 };
+  });
+  pages.forEach(p => {
+    const d = new Date(p.createdAt); d.setHours(0, 0, 0, 0);
+    const idx = dias14.findIndex(x => x.ts === d.getTime());
+    if (idx >= 0) dias14[idx].count++;
+  });
+  const maxCount = Math.max(...dias14.map(d => d.count), 1);
+
   const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "visao-geral", label: "Visão Geral" },
     { key: "pedidos", label: "Pedidos ativos", count: pages.length },
     { key: "pendentes", label: "Aguardando pagamento", count: pending.length },
     { key: "cupons", label: "Cupons", count: coupons.length },
@@ -142,6 +164,71 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
+            {/* ── Visão Geral ── */}
+            {tab === "visao-geral" && (
+              <div className="space-y-6">
+                {/* Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Faturamento total", value: `R$ ${totalReceita.toFixed(2).replace(".", ",")}`, sub: `${pages.length} vendas`, color: "text-green-400" },
+                    { label: "Descontos dados", value: `R$ ${totalDescontos.toFixed(2).replace(".", ",")}`, sub: `${coupons.reduce((s, c) => s + c.uses, 0)} usos de cupom`, color: "text-yellow-400" },
+                    { label: "Plano 7 dias", value: pages.filter(p => p.plan === "7dias").length.toString(), sub: `R$ ${(pages.filter(p => p.plan === "7dias").length * 15.90).toFixed(2).replace(".", ",")}`, color: "text-blue-400" },
+                    { label: "Plano Vitalício", value: pages.filter(p => p.plan === "vitalicio").length.toString(), sub: `R$ ${(pages.filter(p => p.plan === "vitalicio").length * 23.90).toFixed(2).replace(".", ",")}`, color: "text-[#E8185A]" },
+                  ].map(card => (
+                    <div key={card.label} className="bg-[#111118] border border-white/8 rounded-xl p-4">
+                      <p className="text-xs text-white/40 mb-2">{card.label}</p>
+                      <p className={`text-2xl font-black ${card.color}`}>{card.value}</p>
+                      <p className="text-xs text-white/30 mt-1">{card.sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gráfico de vendas */}
+                <div className="bg-[#111118] border border-white/8 rounded-xl p-5">
+                  <h3 className="text-sm font-bold text-white/50 uppercase tracking-widest mb-6">Vendas — últimos 14 dias</h3>
+                  <div className="flex items-end gap-1.5 h-32">
+                    {dias14.map(d => (
+                      <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
+                        <span className="text-[10px] text-white/40 font-bold">{d.count > 0 ? d.count : ""}</span>
+                        <div className="w-full rounded-t-md bg-[#E8185A]/20 relative overflow-hidden" style={{ height: "80px" }}>
+                          <div
+                            className="absolute bottom-0 w-full bg-[#E8185A] rounded-t-md transition-all"
+                            style={{ height: `${(d.count / maxCount) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-white/25 whitespace-nowrap">{d.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cupons mais usados */}
+                {coupons.filter(c => c.uses > 0).length > 0 && (
+                  <div className="bg-[#111118] border border-white/8 rounded-xl p-5">
+                    <h3 className="text-sm font-bold text-white/50 uppercase tracking-widest mb-4">Cupons utilizados</h3>
+                    <div className="space-y-3">
+                      {coupons.filter(c => c.uses > 0).sort((a, b) => b.uses - a.uses).map(c => {
+                        const desconto = c.type === "fixed" ? c.uses * c.discount : null;
+                        return (
+                          <div key={c.code} className="flex items-center gap-3">
+                            <span className="font-mono text-sm font-black text-[#E8185A] w-24 flex-shrink-0">{c.code}</span>
+                            <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-full bg-[#E8185A] rounded-full"
+                                style={{ width: `${Math.min((c.uses / Math.max(...coupons.map(x => x.uses), 1)) * 100, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-white/40 w-16 text-right">{c.uses} usos</span>
+                            {desconto !== null && <span className="text-xs text-yellow-400 w-20 text-right">-R$ {desconto.toFixed(2).replace(".", ",")}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Pedidos ativos ── */}
             {tab === "pedidos" && (
               <div className="space-y-3">
