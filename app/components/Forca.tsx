@@ -69,12 +69,6 @@ export default function Forca({ entradas }: Props) {
       {/* Forca SVG */}
       <HangmanSVG erros={erros} />
 
-      {/* Dica */}
-      <div className="text-center">
-        <p className="text-[#E8185A] text-[10px] font-black uppercase tracking-widest mb-1">Momento marcante</p>
-        <p className="text-gray-400 text-xs">{entrada.dica}</p>
-      </div>
-
       {/* Palavra */}
       <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
         {display.map(({ char, key, isBlank }) =>
