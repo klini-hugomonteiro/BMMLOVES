@@ -1,6 +1,8 @@
+export const dynamic = "force-dynamic";
 import Navbar from "./components/Navbar";
 import Typewriter from "./components/Typewriter";
 import FaqAccordion from "./components/FaqAccordion";
+import { getCount } from "./lib/counter";
 
 const steps = [
   { n: "01", title: "Crie o roteiro", desc: "Preencha a história de vocês: data de início, momentos marcantes, frases especiais." },
@@ -26,6 +28,7 @@ const testimonials = [
 ];
 
 export default function Home() {
+  const count = getCount();
   return (
     <>
       <Navbar />
@@ -141,7 +144,7 @@ export default function Home() {
       {/* ── COUNTER STRIP ── */}
       <div className="bg-[#E8185A] py-3">
         <div className="max-w-7xl mx-auto px-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-white text-xs sm:text-sm font-medium">
-          <span>❤️ <strong>+50.000</strong> presentes criados</span>
+          <span>❤️ <strong>+{count.toLocaleString("pt-BR")}</strong> presentes criados</span>
           <span className="hidden sm:block w-px h-4 bg-white/30" />
           <span>⭐ <strong>4.9/5</strong> avaliação média</span>
           <span className="hidden sm:block w-px h-4 bg-white/30" />

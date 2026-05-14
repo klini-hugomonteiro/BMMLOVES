@@ -5,6 +5,7 @@ import { getPending, savePending, deletePending } from "@/app/lib/pending";
 import { savePage, getPage } from "@/app/lib/pageStore";
 import { sendPageReadyEmail } from "@/app/lib/email";
 import { applyCoupon, incrementCouponUse } from "@/app/lib/coupons";
+import { incrementCount } from "@/app/lib/counter";
 
 const PRICES: Record<string, number> = { "7dias": 19.90, vitalicio: 29.90, edit: 4.90 };
 
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
 
       const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
       savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
+      incrementCount();
       deletePending(tempId);
 
       const pageUrl = `${BASE_URL}/casal/${tempId}`;
