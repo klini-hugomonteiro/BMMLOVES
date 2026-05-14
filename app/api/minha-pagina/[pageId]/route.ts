@@ -15,12 +15,11 @@ export async function GET(
 
   const { pageId } = await params;
 
-  // Admin pode ver qualquer página; cliente só a sua
   if (session.type === "customer" && (session as { pageId: string }).pageId !== pageId) {
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
-  const page = getPage(pageId);
+  const page = await getPage(pageId);
   if (!page) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
   const now = Date.now();

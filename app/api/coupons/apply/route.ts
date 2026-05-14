@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const baseAmount = PRICES[plan as keyof typeof PRICES];
   if (!baseAmount) return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
 
-  const result = applyCoupon(code, baseAmount);
+  const result = await applyCoupon(code, baseAmount);
   if (!result.valid) return NextResponse.json({ error: result.message }, { status: 400 });
 
   return NextResponse.json({ newAmount: result.newAmount, originalAmount: baseAmount });

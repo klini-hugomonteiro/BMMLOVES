@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Suporta formato novo (type/data) e antigo (topic/id)
     const isPayment =
       body.type === "payment" ||
       body.topic === "payment" ||
@@ -38,32 +37,30 @@ export async function POST(req: NextRequest) {
     const tempId = result.external_reference;
     if (!tempId) return NextResponse.json({ ok: true });
 
-    const pending = getPending(tempId);
-    if (!pending) return NextResponse.json({ ok: true }); // já processado
+    const pending = await getPending(tempId);
+    if (!pending) return NextResponse.json({ ok: true });
 
     const now = Date.now();
-    if (pending.data._couponCode) incrementCouponUse(pending.data._couponCode);
+    if (pending.data._couponCode) await incrementCouponUse(pending.data._couponCode);
 
-    // Pagamento de edição
     if (pending.data._editPageId) {
       const editPageId = pending.data._editPageId as string;
-      const existing = getPage(editPageId);
+      const existing = await getPage(editPageId);
       if (existing) {
-        savePage(editPageId, {
+        await savePage(editPageId, {
           ...existing,
           data: { ...existing.data, _editPageId: undefined, _editPending: undefined },
           editUnlockedAt: now,
         } as typeof existing);
       }
-      deletePending(tempId);
+      await deletePending(tempId);
       return NextResponse.json({ ok: true });
     }
 
-    // Pagamento normal — cria a página
     const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
-    savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
+    await savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
     incrementCount();
-    deletePending(tempId);
+    await deletePending(tempId);
 
     const pageUrl = `${BASE_URL}/casal/${tempId}`;
     sendPageReadyEmail({
@@ -77,7 +74,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Webhook error:", err);
-    // Sempre retorna 200 para o MP não ficar reenviando
     return NextResponse.json({ ok: true });
   }
 }

@@ -20,7 +20,7 @@ export async function POST(
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
-  const page = getPage(pageId);
+  const page = await getPage(pageId);
   if (!page) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
   if (page.plan !== "vitalicio") {
@@ -32,17 +32,15 @@ export async function POST(
     return NextResponse.json({ error: "Dentro das 24h, edição é gratuita." }, { status: 400 });
   }
 
-  // Cria pending especial para edição paga
   const tempId = `edit_${pageId}`;
-  savePending(tempId, {
+  await savePending(tempId, {
     data: { ...page.data, _editPageId: pageId },
     plan: "vitalicio",
     email: page.data.email,
     createdAt: Date.now(),
   });
 
-  // Salva flag de "aguardando pagamento de edição" na página
-  savePage(pageId, { ...page, data: { ...page.data, _editPending: tempId } } as typeof page);
+  await savePage(pageId, { ...page, data: { ...page.data, _editPending: tempId } } as typeof page);
 
   return NextResponse.json({ tempId });
 }

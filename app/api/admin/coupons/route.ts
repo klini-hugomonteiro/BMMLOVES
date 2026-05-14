@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const token = req.cookies.get("bmm_session")?.value;
   if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  return NextResponse.json(listCoupons());
+  return NextResponse.json(await listCoupons());
 }
 
 export async function POST(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!code || !type || !discount) return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
   if (!["percent", "fixed"].includes(type)) return NextResponse.json({ error: "Tipo inválido." }, { status: 400 });
 
-  saveCoupon({
+  await saveCoupon({
     code: code.toUpperCase().trim(),
     type,
     discount: Number(discount),

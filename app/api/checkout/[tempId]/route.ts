@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ tempId: string }> }
 ) {
   const { tempId } = await params;
-  const pending = getPending(tempId);
+  const pending = await getPending(tempId);
   if (!pending) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const isEdit = !!pending.data._editPageId;

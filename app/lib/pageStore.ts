@@ -1,7 +1,7 @@
-import fs from "fs";
-import path from "path";
+import { getJsonFromR2, putJsonToR2, deleteFromR2, listR2Keys } from "./r2";
 
-const DATA_DIR = path.join(process.cwd(), "data", "pages");
+const PREFIX = "json/pages/";
+const EMAIL_PREFIX = "json/email-to-page/";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PageRecord = {
@@ -12,35 +12,48 @@ export type PageRecord = {
   expiresAt: number | null;
 };
 
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-export function savePage(pageId: string, record: PageRecord): void {
-  ensureDir();
-  fs.writeFileSync(path.join(DATA_DIR, `${pageId}.json`), JSON.stringify(record));
-}
-
-export function getPage(pageId: string): PageRecord | null {
-  const filePath = path.join(DATA_DIR, `${pageId}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  } catch {
-    return null;
+export async function savePage(pageId: string, record: PageRecord): Promise<void> {
+  await putJsonToR2(`${PREFIX}${pageId}.json`, record);
+  const email = record.data?.email;
+  if (email) {
+    await putJsonToR2(`${EMAIL_PREFIX}${email.toLowerCase()}.json`, { pageId });
   }
 }
 
-export function findPageByEmail(email: string): { pageId: string; record: PageRecord } | null {
-  ensureDir();
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
-  for (const file of files) {
-    try {
-      const record: PageRecord = JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf-8"));
-      if (record.data?.email?.toLowerCase() === email.toLowerCase()) {
-        return { pageId: file.replace(".json", ""), record };
-      }
-    } catch { /* skip */ }
+export async function getPage(pageId: string): Promise<PageRecord | null> {
+  return getJsonFromR2<PageRecord>(`${PREFIX}${pageId}.json`);
+}
+
+export async function deletePage(pageId: string): Promise<void> {
+  const record = await getPage(pageId);
+  if (record?.data?.email) {
+    await deleteFromR2(`${EMAIL_PREFIX}${record.data.email.toLowerCase()}.json`);
   }
-  return null;
+  await deleteFromR2(`${PREFIX}${pageId}.json`);
+}
+
+export async function findPageByEmail(email: string): Promise<{ pageId: string; record: PageRecord } | null> {
+  const index = await getJsonFromR2<{ pageId: string }>(`${EMAIL_PREFIX}${email.toLowerCase()}.json`);
+  if (!index?.pageId) return null;
+  const record = await getPage(index.pageId);
+  if (!record) return null;
+  return { pageId: index.pageId, record };
+}
+
+export async function listAllPages(): Promise<{ pageId: string; record: PageRecord }[]> {
+  const keys = await listR2Keys(PREFIX);
+  const results = await Promise.all(
+    keys.map(async key => {
+      const record = await getJsonFromR2<PageRecord>(key);
+      if (!record) return null;
+      const pageId = key.replace(PREFIX, "").replace(".json", "");
+      return { pageId, record };
+    })
+  );
+  return results.filter((r): r is { pageId: string; record: PageRecord } => r !== null);
+}
+
+export async function countPages(): Promise<number> {
+  const keys = await listR2Keys(PREFIX);
+  return keys.length;
 }

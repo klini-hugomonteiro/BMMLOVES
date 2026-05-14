@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/criar?erro=referencia_invalida`);
   }
 
-  // Verify payment status via MP API (don't trust query params alone)
   if (paymentId && process.env.MERCADOPAGO_ACCESS_TOKEN) {
     try {
       const client = new MercadoPagoConfig({
@@ -28,7 +27,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(`${baseUrl}/criar?erro=pagamento_nao_aprovado`);
       }
     } catch {
-      // If verification fails, fall back to trusting the redirect status
       if (status !== "approved") {
         return NextResponse.redirect(`${baseUrl}/criar?erro=pagamento_nao_aprovado`);
       }
@@ -37,9 +35,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/criar?erro=pagamento_nao_aprovado`);
   }
 
-  const pending = getPending(tempId);
+  const pending = await getPending(tempId);
   if (!pending) {
-    // Page may already have been created (duplicate redirect)
     return NextResponse.redirect(
       `${baseUrl}/pronto?pageId=${tempId}&nome1=&nome2=&tituloFilme=&email=`
     );
@@ -48,14 +45,14 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
 
-  savePage(tempId, {
+  await savePage(tempId, {
     data: pending.data,
     plan: pending.plan,
     createdAt: now,
     expiresAt,
   });
 
-  deletePending(tempId);
+  await deletePending(tempId);
 
   const { nome1, nome2, tituloFilme, email, zap } = pending.data;
   const params = new URLSearchParams({

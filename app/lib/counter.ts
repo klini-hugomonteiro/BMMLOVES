@@ -1,14 +1,10 @@
-import fs from "fs";
-import path from "path";
+import { countPages } from "./pageStore";
 
-const PAGES_DIR = path.join(process.cwd(), "data", "pages");
-const BASE = 297; // número base para prova social
+const BASE = 297;
 
-export function getCount(): number {
-  if (!fs.existsSync(PAGES_DIR)) return BASE;
+export async function getCount(): Promise<number> {
   try {
-    const total = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith(".json")).length;
-    return BASE + total;
+    return BASE + await countPages();
   } catch {
     return BASE;
   }

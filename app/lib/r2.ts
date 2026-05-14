@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 const r2 = new S3Client({
   region: "auto",
@@ -19,6 +19,55 @@ export async function uploadToR2(key: string, body: Buffer, contentType: string)
   return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
 
+export async function getJsonFromR2<T>(key: string): Promise<T | null> {
+  try {
+    const result = await r2.send(new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+    }));
+    const body = await result.Body?.transformToString();
+    if (!body) return null;
+    return JSON.parse(body) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function putJsonToR2(key: string, data: unknown): Promise<void> {
+  await r2.send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+    Body: JSON.stringify(data),
+    ContentType: "application/json",
+  }));
+}
+
+export async function deleteFromR2(key: string): Promise<void> {
+  try {
+    await r2.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+    }));
+  } catch { /* ignora */ }
+}
+
+export async function listR2Keys(prefix: string): Promise<string[]> {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+  do {
+    const result = await r2.send(new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    }));
+    for (const obj of result.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key);
+    }
+    continuationToken = result.NextContinuationToken;
+  } while (continuationToken);
+  return keys;
+}
+
 function isBase64(str: unknown): str is string {
   return typeof str === "string" && str.startsWith("data:");
 }
@@ -31,7 +80,6 @@ function base64ToBuffer(dataUrl: string): { buffer: Buffer; contentType: string;
   return { buffer: Buffer.from(match[2], "base64"), contentType, ext };
 }
 
-// Walks through the payload and uploads all base64 images to R2, replacing with URLs
 export async function processImagesInPayload(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: Record<string, any>,

@@ -11,11 +11,11 @@ export async function PATCH(
   if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code } = await params;
-  const coupon = getCoupon(code);
+  const coupon = await getCoupon(code);
   if (!coupon) return NextResponse.json({ error: "Cupom não encontrado." }, { status: 404 });
 
   const body = await req.json();
-  saveCoupon({ ...coupon, ...body });
+  await saveCoupon({ ...coupon, ...body });
   return NextResponse.json({ ok: true });
 }
 
@@ -27,6 +27,6 @@ export async function DELETE(
   if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code } = await params;
-  deleteCoupon(code);
+  await deleteCoupon(code);
   return NextResponse.json({ ok: true });
 }

@@ -122,6 +122,9 @@ function CriarPageInner() {
   const [submitting, setSubmitting] = useState(false);
   const [submitErro, setSubmitErro] = useState("");
   const [loadingEdit, setLoadingEdit] = useState(isEditing);
+  const [draftRestaurado, setDraftRestaurado] = useState(false);
+  const [pagamentoPendente, setPagamentoPendente] = useState<string | null>(null);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [data, setData] = useState<FormData>({
     nome1: "",
     nome2: "",
@@ -194,6 +197,59 @@ function CriarPageInner() {
       })
       .catch(() => setLoadingEdit(false));
   }, [editId]);
+
+  // Restaura rascunho do localStorage ao entrar (só para criação nova)
+  useEffect(() => {
+    if (isEditing) return;
+
+    const pendingId = localStorage.getItem("bmm_payment_pending");
+    if (pendingId) {
+      fetch(`/api/checkout/${pendingId}`)
+        .then(r => r.json())
+        .then(d => { if (!d.error) setPagamentoPendente(pendingId); })
+        .catch(() => {});
+    }
+
+    try {
+      const saved = localStorage.getItem("bmm_draft");
+      if (!saved) return;
+      const draft = JSON.parse(saved);
+      setData(prev => ({
+        ...prev,
+        ...draft,
+        fotoCapa: null,
+        episodios: (draft.episodios || [prev.episodios[0]]).map((ep: Episodio) => ({
+          ...ep,
+          videoArquivo: null,
+          videoErro: "",
+        })),
+        momentos: (draft.momentos || [prev.momentos[0]]).map((m: Momento) => ({
+          ...m,
+          fotos: (m.fotos || []).map((f: FotoMomento) => ({ ...f, file: null })),
+        })),
+      }));
+      setDraftRestaurado(true);
+      setTimeout(() => setDraftRestaurado(false), 3000);
+    } catch { /* ignora */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salva rascunho no localStorage a cada mudança
+  useEffect(() => {
+    if (isEditing) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      try {
+        const draft = {
+          ...data,
+          fotoCapa: null,
+          episodios: data.episodios.map(ep => ({ ...ep, videoArquivo: null })),
+          momentos: data.momentos.map(m => ({ ...m, fotos: m.fotos.map(f => ({ ...f, file: null })) })),
+        };
+        localStorage.setItem("bmm_draft", JSON.stringify(draft));
+      } catch { /* ignora quota exceeded */ }
+    }, 1000);
+  }, [data, isEditing]);
 
   // cidade autocomplete
   const [cidadeSugestoes, setCidadeSugestoes] = useState<string[]>([]);
@@ -412,6 +468,26 @@ function CriarPageInner() {
             </div>
           ))}
         </div>
+
+        {/* Aviso de rascunho restaurado */}
+        {draftRestaurado && (
+          <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 flex items-center gap-2">
+            <span className="text-green-400 text-xs">✓ Rascunho restaurado — continue de onde parou</span>
+          </div>
+        )}
+
+        {/* Aviso de pagamento pendente */}
+        {pagamentoPendente && (
+          <div className="mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-yellow-300 text-xs">Você tem um pagamento em aberto.</span>
+            <button
+              onClick={() => router.push(`/pagamento/${pagamentoPendente}`)}
+              className="text-xs font-bold text-yellow-300 underline underline-offset-2 flex-shrink-0"
+            >
+              Retomar pagamento →
+            </button>
+          </div>
+        )}
 
         {/* Step header */}
         <div className="mb-8">
@@ -1097,6 +1173,7 @@ function CriarPageInner() {
                     const res = await fetch("/api/checkout", { method: "POST", body: fd });
                     if (!res.ok) throw new Error("Erro ao iniciar pagamento");
                     const { tempId } = await res.json();
+                    localStorage.removeItem("bmm_draft");
                     router.push(`/pagamento/${tempId}`);
                   }
                 } catch (err) {
@@ -1434,7 +1511,7 @@ function EpisodioCard({
                   className="hidden"
                   onChange={e => e.target.files?.[0] && onVideoArquivo(e.target.files[0])}
                 />
-                {!ep.videoNome ? (
+                {!ep.videoNome && (
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}

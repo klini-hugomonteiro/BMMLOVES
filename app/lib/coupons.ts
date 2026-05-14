@@ -1,7 +1,6 @@
-import fs from "fs";
-import path from "path";
+import { getJsonFromR2, putJsonToR2, deleteFromR2, listR2Keys } from "./r2";
 
-const COUPONS_DIR = path.join(process.cwd(), "data", "coupons");
+const PREFIX = "json/coupons/";
 
 export type Coupon = {
   code: string;
@@ -13,39 +12,26 @@ export type Coupon = {
   createdAt: number;
 };
 
-function ensureDir() {
-  if (!fs.existsSync(COUPONS_DIR)) fs.mkdirSync(COUPONS_DIR, { recursive: true });
+export async function saveCoupon(coupon: Coupon): Promise<void> {
+  await putJsonToR2(`${PREFIX}${coupon.code.toUpperCase()}.json`, coupon);
 }
 
-export function saveCoupon(coupon: Coupon): void {
-  ensureDir();
-  fs.writeFileSync(path.join(COUPONS_DIR, `${coupon.code.toUpperCase()}.json`), JSON.stringify(coupon));
+export async function getCoupon(code: string): Promise<Coupon | null> {
+  return getJsonFromR2<Coupon>(`${PREFIX}${code.toUpperCase()}.json`);
 }
 
-export function getCoupon(code: string): Coupon | null {
-  ensureDir();
-  const filePath = path.join(COUPONS_DIR, `${code.toUpperCase()}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try { return JSON.parse(fs.readFileSync(filePath, "utf-8")); } catch { return null; }
+export async function listCoupons(): Promise<Coupon[]> {
+  const keys = await listR2Keys(PREFIX);
+  const results = await Promise.all(keys.map(key => getJsonFromR2<Coupon>(key)));
+  return results.filter((c): c is Coupon => c !== null);
 }
 
-export function listCoupons(): Coupon[] {
-  ensureDir();
-  return fs.readdirSync(COUPONS_DIR)
-    .filter(f => f.endsWith(".json"))
-    .map(f => {
-      try { return JSON.parse(fs.readFileSync(path.join(COUPONS_DIR, f), "utf-8")); } catch { return null; }
-    })
-    .filter(Boolean) as Coupon[];
+export async function deleteCoupon(code: string): Promise<void> {
+  await deleteFromR2(`${PREFIX}${code.toUpperCase()}.json`);
 }
 
-export function deleteCoupon(code: string): void {
-  const filePath = path.join(COUPONS_DIR, `${code.toUpperCase()}.json`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-}
-
-export function applyCoupon(code: string, amount: number): { valid: boolean; newAmount: number; message?: string } {
-  const coupon = getCoupon(code);
+export async function applyCoupon(code: string, amount: number): Promise<{ valid: boolean; newAmount: number; message?: string }> {
+  const coupon = await getCoupon(code);
   if (!coupon) return { valid: false, newAmount: amount, message: "Cupom não encontrado." };
   if (!coupon.active) return { valid: false, newAmount: amount, message: "Cupom inativo." };
   if (coupon.maxUses !== null && coupon.uses >= coupon.maxUses)
@@ -59,7 +45,7 @@ export function applyCoupon(code: string, amount: number): { valid: boolean; new
   return { valid: true, newAmount };
 }
 
-export function incrementCouponUse(code: string): void {
-  const coupon = getCoupon(code);
-  if (coupon) saveCoupon({ ...coupon, uses: coupon.uses + 1 });
+export async function incrementCouponUse(code: string): Promise<void> {
+  const coupon = await getCoupon(code);
+  if (coupon) await saveCoupon({ ...coupon, uses: coupon.uses + 1 });
 }

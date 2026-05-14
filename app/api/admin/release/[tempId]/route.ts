@@ -16,14 +16,14 @@ export async function POST(
   if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { tempId } = await params;
-  const pending = getPending(tempId);
+  const pending = await getPending(tempId);
   if (!pending) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
 
   const now = Date.now();
   const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
 
-  savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
-  deletePending(tempId);
+  await savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
+  await deletePending(tempId);
   incrementCount();
 
   const pageUrl = `${BASE_URL}/casal/${tempId}`;

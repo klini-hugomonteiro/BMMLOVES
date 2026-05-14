@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ pageId: string }> }
 ) {
   const { pageId } = await params;
-  const record = getPage(pageId);
+  const record = await getPage(pageId);
 
   if (!record) {
     return NextResponse.json({ error: "Page not found" }, { status: 404 });

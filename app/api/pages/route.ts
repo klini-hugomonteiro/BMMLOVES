@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const now = Date.now();
     const expiresAt = plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
 
-    savePage(pageId, { data: payload, plan, createdAt: now, expiresAt });
+    await savePage(pageId, { data: payload, plan, createdAt: now, expiresAt });
 
     return NextResponse.json({ pageId });
   } catch (err) {

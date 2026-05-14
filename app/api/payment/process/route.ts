@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     if (!tempId) return NextResponse.json({ error: "Missing tempId" }, { status: 400 });
 
-    const pending = getPending(tempId);
+    const pending = await getPending(tempId);
     if (!pending) return NextResponse.json({ error: "Session expired" }, { status: 404 });
 
     const client = new MercadoPagoConfig({
@@ -28,9 +28,8 @@ export async function POST(req: NextRequest) {
     const payment = new Payment(client);
     const isEdit = !!pending.data._editPageId;
     const baseAmount = isEdit ? PRICES.edit : PRICES[pending.plan];
-    const amount = couponCode
-      ? applyCoupon(couponCode, baseAmount).newAmount
-      : baseAmount;
+    const couponResult = couponCode ? await applyCoupon(couponCode, baseAmount) : null;
+    const amount = couponResult ? couponResult.newAmount : baseAmount;
 
     const result = await payment.create({
       body: {
@@ -47,27 +46,24 @@ export async function POST(req: NextRequest) {
 
     if (result.status === "approved") {
       const now = Date.now();
-      if (couponCode) incrementCouponUse(couponCode);
+      if (couponCode) await incrementCouponUse(couponCode);
 
-      // Pagamento de edição — desbloqueia edição na página existente
       if (isEdit) {
         const editPageId = pending.data._editPageId as string;
-        const existing = getPage(editPageId);
+        const existing = await getPage(editPageId);
         if (existing) {
-          savePage(editPageId, { ...existing, data: { ...existing.data, _editPageId: undefined, _editPending: undefined }, editUnlockedAt: now } as typeof existing);
+          await savePage(editPageId, { ...existing, data: { ...existing.data, _editPageId: undefined, _editPending: undefined }, editUnlockedAt: now } as typeof existing);
         }
-        deletePending(tempId);
+        await deletePending(tempId);
         return NextResponse.json({ status: "approved", redirectUrl: `/minha-pagina/${editPageId}?editUnlocked=1` });
       }
 
       const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
-      savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
+      await savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
       incrementCount();
-      deletePending(tempId);
+      await deletePending(tempId);
 
       const pageUrl = `${BASE_URL}/casal/${tempId}`;
-
-      // Send email (non-blocking)
       sendPageReadyEmail({
         to: pending.email,
         nome1: pending.data.nome1 || "",
@@ -87,9 +83,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "approved", redirectUrl: `/pronto?${params}` });
     }
 
-    // PIX pending — salva cupom no pending para o check/webhook usar depois
     if (couponCode) {
-      savePending(tempId, { ...pending, data: { ...pending.data, _couponCode: couponCode } });
+      await savePending(tempId, { ...pending, data: { ...pending.data, _couponCode: couponCode } });
     }
 
     const pixResponse: Record<string, unknown> = { status: result.status, paymentId: result.id };

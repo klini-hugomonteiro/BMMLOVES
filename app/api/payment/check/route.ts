@@ -24,34 +24,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: result.status });
     }
 
-    const pending = getPending(tempId);
+    const pending = await getPending(tempId);
     if (!pending) {
-      // Já foi processado antes, redireciona
       return NextResponse.json({ status: "approved", redirectUrl: `/casal/${tempId}` });
     }
 
     const now = Date.now();
-    if (pending.data._couponCode) incrementCouponUse(pending.data._couponCode);
+    if (pending.data._couponCode) await incrementCouponUse(pending.data._couponCode);
 
-    // Pagamento de edição
     if (pending.data._editPageId) {
       const editPageId = pending.data._editPageId as string;
-      const existing = getPage(editPageId);
+      const existing = await getPage(editPageId);
       if (existing) {
-        savePage(editPageId, {
+        await savePage(editPageId, {
           ...existing,
           data: { ...existing.data, _editPageId: undefined, _editPending: undefined },
           editUnlockedAt: now,
         } as typeof existing);
       }
-      deletePending(tempId);
+      await deletePending(tempId);
       return NextResponse.json({ status: "approved", redirectUrl: `/minha-pagina/${editPageId}?editUnlocked=1` });
     }
 
-    // Pagamento normal
     const expiresAt = pending.plan === "7dias" ? now + 7 * 24 * 60 * 60 * 1000 : null;
-    savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
-    deletePending(tempId);
+    await savePage(tempId, { data: pending.data, plan: pending.plan, createdAt: now, expiresAt });
+    await deletePending(tempId);
 
     const pageUrl = `${BASE_URL}/casal/${tempId}`;
     sendPageReadyEmail({

@@ -80,6 +80,10 @@ export default function PagamentoPage() {
   }, []);
 
   useEffect(() => {
+    localStorage.setItem("bmm_payment_pending", tempId);
+  }, [tempId]);
+
+  useEffect(() => {
     fetch(`/api/checkout/${tempId}`)
       .then(r => r.json())
       .then(data => {
@@ -187,6 +191,7 @@ export default function PagamentoPage() {
             const d = await r.json();
             if (d.status === "approved" && d.redirectUrl) {
               if (pollRef.current) clearInterval(pollRef.current);
+              localStorage.removeItem("bmm_payment_pending");
               window.location.href = d.redirectUrl;
             }
           } catch { /* ignora erros de rede */ }
@@ -251,6 +256,7 @@ export default function PagamentoPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro ao processar");
       if (result.status === "approved" || result.status === "in_process") {
+        localStorage.removeItem("bmm_payment_pending");
         window.location.href = result.redirectUrl;
         return;
       }

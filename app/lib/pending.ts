@@ -1,7 +1,6 @@
-import fs from "fs";
-import path from "path";
+import { getJsonFromR2, putJsonToR2, deleteFromR2, listR2Keys } from "./r2";
 
-const PENDING_DIR = path.join(process.cwd(), "data", "pending");
+const PREFIX = "json/pending/";
 
 export type PendingRecord = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,26 +10,27 @@ export type PendingRecord = {
   email: string;
 };
 
-function ensureDir() {
-  if (!fs.existsSync(PENDING_DIR)) fs.mkdirSync(PENDING_DIR, { recursive: true });
+export async function savePending(tempId: string, record: PendingRecord): Promise<void> {
+  await putJsonToR2(`${PREFIX}${tempId}.json`, record);
 }
 
-export function savePending(tempId: string, record: PendingRecord): void {
-  ensureDir();
-  fs.writeFileSync(path.join(PENDING_DIR, `${tempId}.json`), JSON.stringify(record));
+export async function getPending(tempId: string): Promise<PendingRecord | null> {
+  return getJsonFromR2<PendingRecord>(`${PREFIX}${tempId}.json`);
 }
 
-export function getPending(tempId: string): PendingRecord | null {
-  const filePath = path.join(PENDING_DIR, `${tempId}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  } catch {
-    return null;
-  }
+export async function deletePending(tempId: string): Promise<void> {
+  await deleteFromR2(`${PREFIX}${tempId}.json`);
 }
 
-export function deletePending(tempId: string): void {
-  const filePath = path.join(PENDING_DIR, `${tempId}.json`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+export async function listAllPending(): Promise<{ tempId: string; record: PendingRecord }[]> {
+  const keys = await listR2Keys(PREFIX);
+  const results = await Promise.all(
+    keys.map(async key => {
+      const record = await getJsonFromR2<PendingRecord>(key);
+      if (!record) return null;
+      const tempId = key.replace(PREFIX, "").replace(".json", "");
+      return { tempId, record };
+    })
+  );
+  return results.filter((r): r is { tempId: string; record: PendingRecord } => r !== null);
 }

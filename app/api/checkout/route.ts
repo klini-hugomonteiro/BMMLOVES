@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Upload all base64 images to R2
     await processImagesInPayload(payload, tempId);
 
-    savePending(tempId, {
+    await savePending(tempId, {
       data: payload,
       plan,
       createdAt: Date.now(),

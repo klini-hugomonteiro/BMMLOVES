@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       tempToken = saveCode(normalized, code, { type: "admin" });
       type = "admin";
     } else {
-      const found = findPageByEmail(normalized);
+      const found = await findPageByEmail(normalized);
       if (!found) {
         return NextResponse.json({ error: "Nenhuma página encontrada para este e-mail." }, { status: 404 });
       }

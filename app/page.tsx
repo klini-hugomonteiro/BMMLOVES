@@ -27,8 +27,8 @@ const testimonials = [
   { name: "Beatriz F.", text: '"A interface é linda demais. Parece um Netflix do nosso relacionamento. Muito criativo."', stars: 5 },
 ];
 
-export default function Home() {
-  const count = getCount();
+export default async function Home() {
+  const count = await getCount();
   return (
     <>
       <Navbar />

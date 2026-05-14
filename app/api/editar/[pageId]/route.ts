@@ -20,7 +20,7 @@ export async function GET(
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
-  const page = getPage(pageId);
+  const page = await getPage(pageId);
   if (!page) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
   return NextResponse.json({ pageId, data: page.data, plan: page.plan });
@@ -41,7 +41,7 @@ export async function POST(
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
-  const existing = getPage(pageId);
+  const existing = await getPage(pageId);
   if (!existing) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
   try {
@@ -52,7 +52,6 @@ export async function POST(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: Record<string, any> = JSON.parse(dataJson);
 
-    // Upload new video files to R2
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("video_") && value instanceof File && value.size > 0) {
         const epId = key.replace("video_", "");
@@ -67,10 +66,8 @@ export async function POST(
       }
     }
 
-    // Upload all base64 images to R2
     await processImagesInPayload(payload, pageId);
-
-    savePage(pageId, { ...existing, data: payload });
+    await savePage(pageId, { ...existing, data: payload });
 
     return NextResponse.json({ ok: true, pageId });
   } catch (err) {
