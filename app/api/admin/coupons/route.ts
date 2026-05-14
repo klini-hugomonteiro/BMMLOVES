@@ -5,14 +5,14 @@ import { listCoupons, saveCoupon } from "@/app/lib/coupons";
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get("bmm_session")?.value;
-  if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token || !await validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   return NextResponse.json(await listCoupons());
 }
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get("bmm_session")?.value;
-  if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token || !await validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code, type, discount, maxUses } = await req.json();
 

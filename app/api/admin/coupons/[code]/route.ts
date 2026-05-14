@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const token = req.cookies.get("bmm_session")?.value;
-  if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token || !await validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code } = await params;
   const coupon = await getCoupon(code);
@@ -24,7 +24,7 @@ export async function DELETE(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const token = req.cookies.get("bmm_session")?.value;
-  if (!token || !validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token || !await validateSession(token)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code } = await params;
   await deleteCoupon(code);

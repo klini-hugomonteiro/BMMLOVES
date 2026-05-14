@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
     let type: "admin" | "customer";
 
     if (isAdmin) {
-      tempToken = saveCode(normalized, code, { type: "admin" });
+      tempToken = await saveCode(normalized, code, { type: "admin" });
       type = "admin";
     } else {
       const found = await findPageByEmail(normalized);
       if (!found) {
         return NextResponse.json({ error: "Nenhuma página encontrada para este e-mail." }, { status: 404 });
       }
-      tempToken = saveCode(normalized, code, { type: "customer", pageId: found.pageId });
+      tempToken = await saveCode(normalized, code, { type: "customer", pageId: found.pageId });
       type = "customer";
     }
 
