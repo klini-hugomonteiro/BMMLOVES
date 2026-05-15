@@ -1184,22 +1184,25 @@ function CriarPageInner() {
                     }
                   }
 
-                  for (const ep of data.episodios) {
-                    if (ep.videoTipo === "arquivo" && ep.videoArquivo) {
-                      fd.append(`video_${ep.id}`, ep.videoArquivo, ep.videoNome || "video.mp4");
+                  const controller = new AbortController();
+                  const timeout = setTimeout(() => controller.abort(), 120_000);
+                  try {
+                    if (isEditing) {
+                      const res = await fetch(`/api/editar/${editId}`, { method: "POST", body: fd, signal: controller.signal });
+                      if (!res.ok) throw new Error("Erro ao salvar alterações");
+                      router.push(`/minha-pagina/${editId}?saved=1`);
+                    } else {
+                      const res = await fetch("/api/checkout", { method: "POST", body: fd, signal: controller.signal });
+                      if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        throw new Error(body?.error || "Erro ao iniciar pagamento. Verifique sua conexão e tente novamente.");
+                      }
+                      const { tempId } = await res.json();
+                      localStorage.removeItem("bmm_draft");
+                      router.push(`/pagamento/${tempId}`);
                     }
-                  }
-
-                  if (isEditing) {
-                    const res = await fetch(`/api/editar/${editId}`, { method: "POST", body: fd });
-                    if (!res.ok) throw new Error("Erro ao salvar alterações");
-                    router.push(`/minha-pagina/${editId}?saved=1`);
-                  } else {
-                    const res = await fetch("/api/checkout", { method: "POST", body: fd });
-                    if (!res.ok) throw new Error("Erro ao iniciar pagamento");
-                    const { tempId } = await res.json();
-                    localStorage.removeItem("bmm_draft");
-                    router.push(`/pagamento/${tempId}`);
+                  } finally {
+                    clearTimeout(timeout);
                   }
                 } catch (err) {
                   setSubmitting(false);
