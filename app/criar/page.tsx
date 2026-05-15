@@ -23,6 +23,16 @@ function compressImage(dataUrl: string, maxDimension = 1200, quality = 0.82): Pr
   });
 }
 
+async function uploadVideo(file: File, key: string): Promise<string> {
+  const contentType = file.type || "video/mp4";
+  const res = await fetch(`/api/video-upload-url?key=${encodeURIComponent(key)}&contentType=${encodeURIComponent(contentType)}`);
+  if (!res.ok) throw new Error("Erro ao iniciar upload do vídeo");
+  const { url, publicUrl } = await res.json();
+  const uploadRes = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": contentType } });
+  if (!uploadRes.ok) throw new Error("Falha ao enviar vídeo. Verifique sua conexão.");
+  return publicUrl;
+}
+
 async function uploadImage(dataUrl: string, key: string): Promise<string> {
   if (!dataUrl.startsWith("data:")) return dataUrl;
   const compressed = await compressImage(dataUrl);
@@ -1231,14 +1241,18 @@ function CriarPageInner() {
                     }
                   }
 
+                  // Upload vídeos direto ao R2 (evita FUNCTION_PAYLOAD_TOO_LARGE para arquivos grandes)
+                  for (const ep of payload.episodios) {
+                    const epData = data.episodios.find(e => e.id === ep.id);
+                    if (ep.videoTipo === "arquivo" && epData?.videoArquivo) {
+                      const ext = epData.videoNome?.split(".").pop() || "mp4";
+                      ep.videoUrl = await uploadVideo(epData.videoArquivo, `${tempId}/${ep.id}.${ext}`);
+                    }
+                  }
+
                   const fd = new FormData();
                   fd.append("data", JSON.stringify(payload));
                   fd.append("tempId", tempId);
-                  for (const ep of data.episodios) {
-                    if (ep.videoTipo === "arquivo" && ep.videoArquivo) {
-                      fd.append(`video_${ep.id}`, ep.videoArquivo, ep.videoNome || "video.mp4");
-                    }
-                  }
 
                   const controller = new AbortController();
                   const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -1253,7 +1267,7 @@ function CriarPageInner() {
                         const body = await res.json().catch(() => ({}));
                         throw new Error(body?.error || "Erro ao iniciar pagamento. Verifique sua conexão e tente novamente.");
                       }
-                      const { tempId } = await res.json();
+                      await res.json();
                       localStorage.removeItem("bmm_draft");
                       router.push(`/pagamento/${tempId}`);
                     }
