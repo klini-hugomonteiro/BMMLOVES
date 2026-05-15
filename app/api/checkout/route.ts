@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: Record<string, any> = JSON.parse(dataJson);
     const plan = (payload.plano as "7dias" | "vitalicio") || "7dias";
-    const tempId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    const tempId = (formData.get("tempId") as string) || crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
     // Upload video files to R2 (tempId = eventual pageId)
     for (const [key, value] of formData.entries()) {

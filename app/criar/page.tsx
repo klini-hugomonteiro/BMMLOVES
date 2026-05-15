@@ -4,6 +4,41 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ContadorTempo from "../components/ContadorTempo";
 
+function compressImage(dataUrl: string, maxDimension = 1200, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width >= height) { height = Math.round(height * maxDimension / width); width = maxDimension; }
+        else { width = Math.round(width * maxDimension / height); height = maxDimension; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+async function uploadImage(dataUrl: string, key: string): Promise<string> {
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+  const compressed = await compressImage(dataUrl);
+  const match = compressed.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Imagem inválida");
+  const [, contentType, b64] = match;
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: contentType });
+  const fd = new FormData();
+  fd.append("file", blob, key.split("/").pop() + ".jpg");
+  fd.append("key", key);
+  const res = await fetch("/api/upload-image", { method: "POST", body: fd });
+  if (!res.ok) throw new Error("Falha ao enviar imagem. Tente novamente.");
+  return (await res.json()).url;
+}
+
 type FotoMomento = { id: string; file: File | null; preview: string; legenda: string };
 
 type Momento = {
@@ -1146,7 +1181,9 @@ function CriarPageInner() {
                 setSubmitting(true);
                 setSubmitErro("");
                 try {
-                  const fd = new FormData();
+                  const tempId = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+
+                  // Monta payload com base64 ainda (será substituído abaixo)
                   const payload = {
                     nome1: data.nome1,
                     nome2: data.nome2,
@@ -1177,7 +1214,26 @@ function CriarPageInner() {
                       fotos: m.fotos.map(f => ({ id: f.id, preview: f.preview, legenda: f.legenda })),
                     })),
                   };
+
+                  // Upload direto de cada imagem para o R2 (evita FUNCTION_PAYLOAD_TOO_LARGE)
+                  if (payload.fotoCapaPreview?.startsWith("data:"))
+                    payload.fotoCapaPreview = await uploadImage(payload.fotoCapaPreview, `${tempId}/capa.jpg`);
+                  if (payload.fotoSobreCasal?.startsWith("data:"))
+                    payload.fotoSobreCasal = await uploadImage(payload.fotoSobreCasal, `${tempId}/sobre-casal.jpg`);
+                  for (const ep of payload.episodios) {
+                    if (ep.capaPreview?.startsWith("data:"))
+                      ep.capaPreview = await uploadImage(ep.capaPreview, `${tempId}/ep-${ep.id}-capa.jpg`);
+                  }
+                  for (const m of payload.momentos) {
+                    for (const foto of m.fotos) {
+                      if (foto.preview?.startsWith("data:"))
+                        foto.preview = await uploadImage(foto.preview, `${tempId}/m-${m.id}-${foto.id}.jpg`);
+                    }
+                  }
+
+                  const fd = new FormData();
                   fd.append("data", JSON.stringify(payload));
+                  fd.append("tempId", tempId);
                   for (const ep of data.episodios) {
                     if (ep.videoTipo === "arquivo" && ep.videoArquivo) {
                       fd.append(`video_${ep.id}`, ep.videoArquivo, ep.videoNome || "video.mp4");
